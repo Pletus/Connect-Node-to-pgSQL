@@ -9,6 +9,7 @@ const {
   createOneUser,
   updateOneUser,
   deleteOneUser,
+  getLinkedUsers,
 } = require("./controllers/controllers.js");
 
 const {
@@ -21,7 +22,6 @@ const {
 
 const PORT = process.env.PGPORT || 8000;
 
-// Function to test PostgreSQL connection and get version
 async function testDbConnection() {
   try {
     await getPgVersion();
@@ -30,11 +30,9 @@ async function testDbConnection() {
   }
 }
 
-// Call the function to test database connection
 getPgVersion();
 app.use(express.json());
 
-// Define a simple route
 app.get("/", (req, res) => {
   res.send("Hello World!");
 });
@@ -45,8 +43,7 @@ app
   .get(getOneUser)
   .put(updateOneUser)
   .delete(deleteOneUser);
-
-console.log(getOneUser);
+app.route("/:id/users").get(getLinkedUsers);
 
 app.route("/orders").get(getAllOrders).post(createOneOrder);
 app
@@ -59,5 +56,3 @@ app
 app.listen(PORT, () =>
   console.log(`Server running at http://localhost:${PORT}`)
 );
-
-console.log(pool);

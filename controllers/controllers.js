@@ -1,8 +1,7 @@
-const { pool } = require('../DB/dbConnect');
+const { pool } = require("../DB/dbConnect");
 
 const getAllUsers = (req, res) => {
-  // const query = 'SELECT * FROM users';
-  pool.query('SELECT * FROM users', (error, results) => {
+  pool.query("SELECT * FROM users", (error, results) => {
     if (error) {
       throw error;
     }
@@ -12,7 +11,7 @@ const getAllUsers = (req, res) => {
 
 const getOneUser = (req, res) => {
   const { id } = req.params;
-  pool.query('SELECT * FROM users WHERE id = $1', [id], (error, results) => {
+  pool.query("SELECT * FROM users WHERE id = $1", [id], (error, results) => {
     if (error) {
       throw error;
     }
@@ -23,60 +22,84 @@ const getOneUser = (req, res) => {
 };
 
 const createOneUser = (req, res) => {
-  const { name, email } = req.body;
+  const { id } = req.params;
+  const { first_name, last_name, age } = req.body;
+
+  pool.query("SELECT * FROM users WHERE id = $1", [id], (error, results) => {
+    if (error) {
+      return res.status(500).send("Error querying the database");
+    }
+    if (results.rows.length > 0) {
+      return res.status(400).send("User already exists!");
+    } else {
+      pool.query(
+        "INSERT INTO users(first_name, last_name, age, active) VALUES($1, $2, $3, true)",
+        [first_name, last_name, age],
+        (error, results) => {
+          if (error) {
+            return res
+              .status(500)
+              .send("Error inserting user into the database");
+          }
+          res.status(201).send("User was created!");
+        }
+      );
+    }
+  });
+};
+
+const updateOneUser = (req, res) => {
+  const { id } = req.params;
+  const { first_name, last_name, age, active } = req.body;
+
+  if (
+    !id ||
+    !first_name ||
+    !last_name ||
+    age === undefined ||
+    active === undefined
+  ) {
+    return res.status(400).send("Missing required fields");
+  }
+
   pool.query(
-    'SELECT * FROM users WHERE email = $1',
-    [email],
+    "UPDATE users SET first_name = $1, last_name = $2, age = $3, active = $4 WHERE id = $5",
+    [first_name, last_name, age, active, id],
     (error, results) => {
       if (error) {
-        throw error;
+        console.error("Error updating user in the database:", error);
+        return res.status(500).send("Error updating user in the database");
       }
-      if (results.rows > 0) {
-        res.send('User already exists!');
-      } else {
-        pool.query(
-          'INSERT INTO users(name, email) VALUES($1, $2)',
-          [name, email],
-          (error, results) => {
-            if (error) {
-              throw error;
-            }
-            res.send(`User was created!`);
-          }
-        );
+      if (results.rowCount === 0) {
+        return res.status(404).send(`User with ID ${id} not found`);
       }
+      res.status(200).send(`User with ID ${id} was updated successfully!`);
     }
   );
 };
 
-const updateOneUser = (req, res) => {
-    const { id } = req.params;
-    const { name, email } = req.body;
-    pool.query(
-      'UPDATE users SET name = $1, email = $2 WHERE id = $3',
-      [name, email, id],
-      (error, results) => {
-        if (error) {
-          throw error;
-        }
-        res.send(`User with ID ${id} was updated!`);
-      }
-    );
-  };
-
 const deleteOneUser = (req, res) => {
-    const { id } = req.params;
-    pool.query(
-      'DELETE FROM users WHERE id = $1',
-      [id],
-      (error, results) => {
-        if (error) {
-          throw error;
-        }
-        res.send(`User with ID ${id} was deleted!`);
+  const { id } = req.params;
+  pool.query("DELETE FROM users WHERE id = $1", [id], (error, results) => {
+    if (error) {
+      throw error;
+    }
+    res.send(`User with ID ${id} was deleted!`);
+  });
+};
+
+const getLinkedUsers = (req, res) => {
+  const { id } = req.params;
+  pool.query(
+    "SELECT * FROM orders INNER JOIN users ON users.id = orders.user_id",
+    (error, results) => {
+      if (error) {
+        throw error;
       }
-    );
-  };
+      res.json(results.rows);
+    }
+  );
+};
 
 module.exports = {
   getAllUsers,
@@ -84,4 +107,5 @@ module.exports = {
   createOneUser,
   updateOneUser,
   deleteOneUser,
+  getLinkedUsers,
 };
